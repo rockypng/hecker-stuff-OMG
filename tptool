@@ -1,0 +1,66 @@
+--[[
+	WARNING: Heads up! This script has not been verified by ScriptBlox. Use at your own risk!
+]]
+local player = game.Players.LocalPlayer
+
+-- Function to create and give the teleport tool
+local function giveTool()
+    local mouse = player:GetMouse()
+    local tool = Instance.new("Tool")
+    tool.RequiresHandle = false
+    tool.Name = "Tp tool (Equip to Click TP)"
+    
+    tool.Activated:Connect(function()
+        if not player.Character then return end
+        
+        local humanoidRootPart = player.Character:FindFirstChild("HumanoidRootPart")
+        if not humanoidRootPart then return end
+        
+        -- Get the target position
+        local targetPosition = mouse.Hit.Position
+        
+        -- Add a small offset to prevent falling through floors (more reliable)
+        local floorOffset = 2.5
+        local adjustedPosition = Vector3.new(targetPosition.X, targetPosition.Y + floorOffset, targetPosition.Z)
+        
+        -- Teleport using CFrame with position only (less offset issues)
+        humanoidRootPart.CFrame = CFrame.new(adjustedPosition)
+    end)
+    
+    -- Ensure the tool goes to the player's backpack
+    tool.Parent = player.Backpack
+end
+
+-- Function to check and give tool if needed
+local function checkAndGiveTool()
+    task.wait(0.5) -- Slightly shorter wait
+    
+    -- Check if tool already exists
+    if not player.Backpack:FindFirstChild("Tp tool (Equip to Click TP)") then
+        giveTool()
+    end
+end
+
+-- Give the tool when the player respawns
+local characterAddedConnection = player.CharacterAdded:Connect(function()
+    checkAndGiveTool()
+end)
+
+-- Give the tool at the start if the character is already loaded
+if player.Character then
+    checkAndGiveTool()
+end
+
+-- Cleanup function (optional but good practice)
+local function cleanup()
+    if characterAddedConnection then
+        characterAddedConnection:Disconnect()
+    end
+end
+
+-- Disconnect when player leaves
+player.AncestryChanged:Connect(function()
+    if not player.Parent then
+        cleanup()
+    end
+end)
