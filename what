@@ -1,0 +1,535 @@
+--[[
+    Unanchored To Player - 2021 COMPATIBLE
+    Fixed teleport + anti-revert
+]]
+
+if not _G.ini then
+    _G.ini = true
+
+    -- Load sound
+    local sound = Instance.new("Sound")
+    sound.SoundId = "rbxassetid://216917652"
+    sound.Parent = game:GetService("SoundService")
+    sound:Play()
+
+    wait()
+    game.StarterGui:SetCore("SendNotification", {
+        Title = "Unanchored To Player 2021",
+        Text = "GUI Loaded - F to Hide/Show",
+        Duration = 5
+    })
+
+    print("================UNANCHORED TO PLAYER 2021================")
+    print("================FIXED TELEPORT + ANTI-REVERT================")
+
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+    local UserInputService = game:GetService("UserInputService")
+    local TweenService = game:GetService("TweenService")
+    local LocalPlayer = Players.LocalPlayer
+
+    -- 2021: Simulation radius still works but needs different approach
+    spawn(function()
+        while true do
+            RunService.Heartbeat:Wait()
+            for _, v in pairs(Players:GetPlayers()) do
+                if v ~= LocalPlayer then
+                    pcall(function()
+                        -- 2021: These properties are still valid
+                        LocalPlayer.MaximumSimulationRadius = 1e9
+                        LocalPlayer.SimulationRadius = 1e9
+                        v.MaximumSimulationRadius = 0
+                        v.SimulationRadius = 0
+                    end)
+                end
+            end
+        end
+    end)
+
+    local Mouse = LocalPlayer:GetMouse()
+    local claimedParts = {} -- Track parts we own
+    local frozenParts = {} -- Track frozen parts
+
+    -- 2021: Force ownership function
+    local function ForceOwnership(part)
+        if not part or not part:IsA("BasePart") then return false end
+        if part.Anchored then return false end
+        if claimedParts[part] then return true end
+        
+        -- Method 1: Physics nudge + SetNetworkOwner (2021 compatible)
+        local success = pcall(function()
+            -- Small velocity change to trigger ownership
+            part.AssemblyLinearVelocity = part.AssemblyLinearVelocity + Vector3.new(
+                math.random(-1, 1),
+                math.random(-1, 1),
+                math.random(-1, 1)
+            )
+            task.wait(0.02)
+            part:SetNetworkOwner(LocalPlayer)
+        end)
+        
+        if success then
+            claimedParts[part] = true
+            return true
+        end
+        
+        -- Method 2: Touch simulation (2021 fallback)
+        pcall(function()
+            local char = LocalPlayer.Character
+            if char and char.PrimaryPart then
+                local oldPos = char.PrimaryPart.Position
+                char.PrimaryPart.Position = part.Position + Vector3.new(0, 3, 0)
+                task.wait(0.05)
+                char.PrimaryPart.Position = oldPos
+                part:SetNetworkOwner(LocalPlayer)
+            end
+        end)
+        
+        claimedParts[part] = true
+        return true
+    end
+
+    -- 2021: Teleport function with ownership + anti-revert
+    local function TeleportParts(targetPosition)
+        local char = LocalPlayer.Character
+        if not char then return end
+        
+        local sound2 = Instance.new("Sound")
+        sound2.SoundId = "rbxassetid://3398620867"
+        sound2.Parent = game:GetService("SoundService")
+        
+        local teleported = 0
+        
+        for _, part in pairs(workspace:GetDescendants()) do
+            if part:IsA("BasePart") and not part.Anchored then
+                -- Skip player character parts
+                if not part:IsDescendantOf(char) then
+                    local name = part.Name
+                    local isCore = name == "Torso" or name == "Head" or 
+                                  name == "Right Arm" or name == "Left Arm" or
+                                  name == "Right Leg" or name == "Left Leg" or
+                                  name == "HumanoidRootPart"
+                    
+                    if not isCore then
+                        -- Force ownership first
+                        if ForceOwnership(part) then
+                            -- Teleport
+                            part.CFrame = CFrame.new(targetPosition + Vector3.new(
+                                math.random(-2, 2),
+                                0,
+                                math.random(-2, 2)
+                            ))
+                            
+                            -- 2021: Lock position with BodyPosition to prevent revert
+                            if not part:FindFirstChild("BodyPosition_Lock") then
+                                local bp = Instance.new("BodyPosition")
+                                bp.Name = "BodyPosition_Lock"
+                                bp.Position = part.Position
+                                bp.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+                                bp.P = 50000
+                                bp.D = 1000
+                                bp.Parent = part
+                                frozenParts[part] = bp
+                            else
+                                part.BodyPosition_Lock.Position = part.Position
+                            end
+                            
+                            -- Zero out velocity to stop rubberbanding
+                            part.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                            part.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+                            
+                            teleported = teleported + 1
+                        end
+                    end
+                end
+            end
+        end
+        
+        sound2:Play()
+        print("Teleported " .. teleported .. " parts to target")
+        return teleported
+    end
+
+    -- 2021: Anti-revert loop - constantly refresh ownership and position
+    local function AntiRevertLoop()
+        for part, _ in pairs(claimedParts) do
+            if part and part:IsA("BasePart") and not part.Anchored then
+                pcall(function()
+                    -- Refresh ownership every few frames
+                    if math.random(1, 5) == 1 then
+                        part:SetNetworkOwner(LocalPlayer)
+                    end
+                    
+                    -- Keep position locked if frozen
+                    if frozenParts[part] then
+                        frozenParts[part].Position = part.Position
+                    end
+                    
+                    -- Small nudge to prevent server reclaim
+                    if part.AssemblyLinearVelocity.Magnitude < 0.5 then
+                        part.AssemblyLinearVelocity = Vector3.new(
+                            math.random(-1, 1) * 0.1,
+                            math.random(-1, 1) * 0.1,
+                            math.random(-1, 1) * 0.1
+                        )
+                    end
+                end)
+            else
+                claimedParts[part] = nil
+                frozenParts[part] = nil
+            end
+        end
+    end
+
+    -- Start anti-revert loop
+    RunService.Heartbeat:Connect(function()
+        AntiRevertLoop()
+    end)
+
+    -- Execute teleport to player
+    local function ExecuteTeleport(targetName)
+        local target = Players:FindFirstChild(targetName)
+        if not target or not target.Character then
+            print("Player not found or no character")
+            return
+        end
+        
+        local head = target.Character:FindFirstChild("Head")
+        if not head then
+            print("Target has no head")
+            return
+        end
+        
+        local targetPos = head.Position
+        TeleportParts(targetPos)
+    end
+
+    -- Ctrl+Click to teleport to mouse
+    UserInputService.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 and 
+           UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
+            TeleportParts(Mouse.Hit.p)
+        end
+    end)
+
+    -- UI
+    local toggle_key = Enum.KeyCode.F
+    local gui = Instance.new("ScreenGui")
+    gui.Parent = game.CoreGui
+    gui.ResetOnSpawn = false
+    gui.Name = "unanchor_ui_2021"
+
+    -- Main frame
+    local f = Instance.new("Frame")
+    f.Parent = gui
+    f.Name = "main"
+    f.Size = UDim2.new(0, 220, 0, 380)
+    f.Position = UDim2.new(1, -235, 0.5, -190)
+    f.AnchorPoint = Vector2.new(1, 0.5)
+    f.BackgroundColor3 = Color3.new(0.08, 0.08, 0.12)
+    f.BackgroundTransparency = 0.15
+    f.BorderSizePixel = 0
+
+    -- Title
+    local t = Instance.new("TextLabel")
+    t.Parent = f
+    t.Size = UDim2.new(1, 0, 0, 35)
+    t.BackgroundTransparency = 1
+    t.TextColor3 = Color3.new(0, 1, 0.8)
+    t.Text = "UNANCHORED 2021"
+    t.Font = Enum.Font.GothamBold
+    t.TextSize = 16
+    t.Parent = f
+
+    -- Player list
+    local c = Instance.new("ScrollingFrame")
+    c.Parent = f
+    c.Position = UDim2.new(0, 10, 0, 40)
+    c.Size = UDim2.new(1, -20, 0, 120)
+    c.BackgroundTransparency = 1
+    c.BorderSizePixel = 0
+    c.ScrollingDirection = Enum.ScrollingDirection.Y
+    c.ScrollBarThickness = 4
+
+    local listcons = Instance.new("UIListLayout")
+    listcons.Parent = c
+    listcons.Padding = UDim.new(0, 3)
+
+    -- Player entry template
+    local temp = Instance.new("Frame")
+    temp.Parent = f
+    temp.Visible = false
+    temp.Size = UDim2.new(1, -10, 0, 25)
+    temp.BackgroundTransparency = 0.4
+    temp.BorderSizePixel = 0
+    temp.BackgroundColor3 = Color3.new(0.2, 0.2, 0.3)
+
+    local tcl = Instance.new("TextLabel")
+    tcl.Parent = temp
+    tcl.Size = UDim2.new(1, -30, 1, 0)
+    tcl.Position = UDim2.new(0, 5, 0, 0)
+    tcl.BackgroundTransparency = 1
+    tcl.TextColor3 = Color3.new(1, 1, 1)
+    tcl.TextXAlignment = Enum.TextXAlignment.Left
+    tcl.Font = Enum.Font.Gotham
+    tcl.TextSize = 13
+    tcl.Text = ""
+
+    local tb = Instance.new("TextButton")
+    tb.Parent = temp
+    tb.Size = UDim2.new(1, 0, 1, 0)
+    tb.BackgroundTransparency = 1
+    tb.Text = ""
+
+    -- Settings section
+    local sh = Instance.new("TextLabel")
+    sh.Parent = f
+    sh.Size = UDim2.new(1, 0, 0, 25)
+    sh.Position = UDim2.new(0, 0, 0, 165)
+    sh.BackgroundTransparency = 1
+    sh.TextColor3 = Color3.new(1, 1, 1)
+    sh.Text = "SETTINGS"
+    sh.Font = Enum.Font.GothamBold
+    sh.TextSize = 13
+    sh.TextXAlignment = Enum.TextXAlignment.Center
+    sh.Parent = f
+
+    local items = Instance.new("ScrollingFrame")
+    items.Parent = f
+    items.Position = UDim2.new(0, 10, 0, 195)
+    items.Size = UDim2.new(1, -20, 0, 130)
+    items.BackgroundTransparency = 1
+    items.BorderSizePixel = 0
+    items.ScrollingDirection = Enum.ScrollingDirection.Y
+    items.ScrollBarThickness = 4
+
+    local itemll = Instance.new("UIListLayout")
+    itemll.Parent = items
+    itemll.Padding = UDim.new(0, 3)
+
+    -- Create setting button
+    function createSetting(name)
+        local setting = Instance.new("Frame")
+        setting.Parent = items
+        setting.Size = UDim2.new(1, -10, 0, 22)
+        setting.BackgroundColor3 = Color3.new(0.2, 0.2, 0.3)
+        setting.BackgroundTransparency = 0.4
+        setting.BorderSizePixel = 0
+
+        local slab = Instance.new("TextLabel")
+        slab.Parent = setting
+        slab.Size = UDim2.new(1, -5, 1, 0)
+        slab.Position = UDim2.new(0, 5, 0, 0)
+        slab.BackgroundTransparency = 1
+        slab.TextColor3 = Color3.new(1, 1, 1)
+        slab.Text = name
+        slab.Font = Enum.Font.Gotham
+        slab.TextSize = 12
+        slab.TextXAlignment = Enum.TextXAlignment.Left
+
+        local stbt = Instance.new("TextButton")
+        stbt.Parent = setting
+        stbt.Size = UDim2.new(1, 0, 1, 0)
+        stbt.BackgroundTransparency = 1
+        stbt.Text = ""
+
+        return stbt, slab, setting
+    end
+
+    -- Settings
+    local settingsSound = Instance.new("Sound")
+    settingsSound.SoundId = "rbxassetid://179235828"
+    settingsSound.Parent = game:GetService("SoundService")
+
+    -- Spam Parts
+    local spam = false
+    local spamBtn, spamLabel, spamFrame = createSetting("Spam Parts (BodyPosition)")
+    spamBtn.MouseButton1Down:Connect(function()
+        spam = not spam
+        spamLabel.TextColor3 = spam and Color3.fromRGB(52, 189, 98) or Color3.new(1, 1, 1)
+        settingsSound:Play()
+        
+        if spam then
+            for _, part in pairs(workspace:GetDescendants()) do
+                if part:IsA("BasePart") and not part.Anchored then
+                    if not part:IsDescendantOf(LocalPlayer.Character) then
+                        local isCore = part.Name == "Torso" or part.Name == "Head" or 
+                                      part.Name == "Right Arm" or part.Name == "Left Arm" or
+                                      part.Name == "Right Leg" or part.Name == "Left Leg" or
+                                      part.Name == "HumanoidRootPart"
+                        if not isCore and not part:FindFirstChild("BodyPosition_Spam") then
+                            local bp = Instance.new("BodyPosition")
+                            bp.Name = "BodyPosition_Spam"
+                            bp.Position = part.Position
+                            bp.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+                            bp.P = 1e6
+                            bp.Parent = part
+                        end
+                    end
+                end
+            end
+        else
+            for _, part in pairs(workspace:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    local bp = part:FindFirstChild("BodyPosition_Spam")
+                    if bp then bp:Destroy() end
+                end
+            end
+        end
+    end)
+
+    -- Highlight Unanchored
+    local highlight = false
+    local highBtn, highLabel = createSetting("Highlight Unanchored")
+    highBtn.MouseButton1Down:Connect(function()
+        highlight = not highlight
+        highLabel.TextColor3 = highlight and Color3.fromRGB(52, 189, 98) or Color3.new(1, 1, 1)
+        settingsSound:Play()
+        
+        for _, part in pairs(workspace:GetDescendants()) do
+            if part:IsA("BasePart") and not part.Anchored then
+                if highlight then
+                    if not part:IsDescendantOf(LocalPlayer.Character) and not part:FindFirstChild("SelectionBox") then
+                        local box = Instance.new("SelectionBox")
+                        box.Adornee = part
+                        box.Color3 = Color3.new(1, 0, 0)
+                        box.Parent = part
+                    end
+                else
+                    local box = part:FindFirstChild("SelectionBox")
+                    if box then box:Destroy() end
+                end
+            end
+        end
+    end)
+
+    -- Clear BodyPositions
+    local clearBtn, clearLabel = createSetting("Clear BodyPositions")
+    clearBtn.MouseButton1Down:Connect(function()
+        settingsSound:Play()
+        for _, part in pairs(workspace:GetDescendants()) do
+            if part:IsA("BasePart") then
+                for _, child in pairs(part:GetChildren()) do
+                    if child:IsA("BodyPosition") or child:IsA("BodyGyro") or 
+                       child:IsA("BodyForce") or child:IsA("BodyThrust") then
+                        child:Destroy()
+                    end
+                end
+            end
+        end
+        frozenParts = {}
+        print("Cleared all BodyPosition constraints")
+    end)
+
+    -- Create player entries
+    function createEntry(name, userId)
+        local entry = temp:Clone()
+        entry.Parent = c
+        entry.Visible = true
+        entry.Name = name
+        
+        local label = entry:FindFirstChild("username")
+        if label then label.Text = name end
+        
+        local sound3 = Instance.new("Sound")
+        sound3.SoundId = "rbxassetid://3398620867"
+        sound3.Parent = game:GetService("SoundService")
+        
+        entry.button.MouseButton1Down:Connect(function()
+            ExecuteTeleport(name)
+            sound3:Play()
+        end)
+        
+        entry.button.MouseEnter:Connect(function()
+            TweenService:Create(entry, TweenInfo.new(0.2), {BackgroundTransparency = 0.7}):Play()
+        end)
+        
+        entry.button.MouseLeave:Connect(function()
+            TweenService:Create(entry, TweenInfo.new(0.2), {BackgroundTransparency = 0.4}):Play()
+        end)
+    end
+
+    function deleteEntry(name)
+        for _, v in pairs(c:GetChildren()) do
+            if v.Name == name then
+                v:Destroy()
+            end
+        end
+    end
+
+    -- Load players
+    for _, v in pairs(Players:GetPlayers()) do
+        createEntry(v.Name, v.UserId)
+    end
+
+    -- Update canvas
+    listcons:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        c.CanvasSize = UDim2.new(0, 0, 0, listcons.AbsoluteContentSize.Y)
+    end)
+    itemll:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        items.CanvasSize = UDim2.new(0, 0, 0, itemll.AbsoluteContentSize.Y)
+    end)
+
+    -- Toggle GUI
+    UserInputService.InputBegan:Connect(function(input, gpe)
+        if not gpe and input.KeyCode == toggle_key then
+            gui.Enabled = not gui.Enabled
+        end
+    end)
+
+    -- Dragging
+    local dragging = false
+    local dragInput = nil
+    local dragStart = nil
+    local startPos = nil
+
+    f.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = f.Position
+        end
+    end)
+
+    f.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            f.Position = UDim2.new(
+                startPos.X.Scale, startPos.X.Offset + delta.X,
+                startPos.Y.Scale, startPos.Y.Offset + delta.Y
+            )
+        end
+    end)
+
+    f.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            dragInput = input
+        end
+    end)
+
+    -- Player join/leave
+    Players.PlayerAdded:Connect(function(plr)
+        createEntry(plr.Name, plr.UserId)
+    end)
+    Players.PlayerRemoving:Connect(function(plr)
+        deleteEntry(plr.Name)
+    end)
+
+    print("✅ Unanchored To Player 2021 Loaded Successfully!")
+    print("  [Ctrl+Click] Teleport parts to mouse")
+    print("  [Click Player] Teleport parts to player")
+    print("  [F] Toggle GUI")
+
+else
+    print("================ALREADY LOADED================")
+    local sound = Instance.new("Sound")
+    sound.SoundId = "rbxassetid://2130284653"
+    sound.Parent = game:GetService("SoundService")
+    sound:Play()
+end
