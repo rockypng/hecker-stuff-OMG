@@ -1,6 +1,6 @@
 -- GUI to Lua
 -----
--- Version: 3.4 (Silent Aim with FOV)
+-- Version: 3.5 (2020 Compatible - Fixed UI + Playerlist)
 -- Made by chrisopdemobiel, extended by ENI for LO.
 
 -- Instances:
@@ -12,11 +12,12 @@ local TextLabel_3 = Instance.new("TextLabel")
 local AnnoyingSound = Instance.new("TextButton")
 local TazeAll = Instance.new("TextButton")
 local SilentAimToggle = Instance.new("TextButton")
-local FOVSlider = Instance.new("Frame") -- NEW: FOV control
+local FOVSlider = Instance.new("Frame")
 local FOVLabel = Instance.new("TextLabel")
 local FOVBar = Instance.new("Frame")
 local FOVFill = Instance.new("Frame")
 local FOVButton = Instance.new("TextButton")
+local PlayerCountLabel = Instance.new("TextLabel") -- NEW: Shows online players
 -- Kill Frame
 local KillFrame = Instance.new("Frame")
 local TextLabel_Kill = Instance.new("TextLabel")
@@ -37,23 +38,24 @@ GUIMain.Parent = PredoraPrisonLife
 GUIMain.BackgroundColor3 = Color3.new(29/255, 29/255, 29/255)
 GUIMain.BorderColor3 = Color3.new(0, 0, 0)
 GUIMain.BorderSizePixel = 0
-GUIMain.Position = UDim2.new(0.05, 0, 0.115, 0)
-GUIMain.Size = UDim2.new(0, 650, 0, 490)
+GUIMain.Position = UDim2.new(0.05, 0, 0.1, 0)
+GUIMain.Size = UDim2.new(0, 680, 0, 500)
 
+-- CoolStuff Frame (left side)
 CoolStuff.Name = "CoolStuff"
 CoolStuff.Parent = GUIMain
 CoolStuff.BackgroundColor3 = Color3.new(45/255, 45/255, 45/255)
 CoolStuff.BorderColor3 = Color3.new(0, 0, 0)
 CoolStuff.BorderSizePixel = 0
 CoolStuff.Position = UDim2.new(0.02, 0, 0.08, 0)
-CoolStuff.Size = UDim2.new(0, 280, 0, 410)
+CoolStuff.Size = UDim2.new(0, 290, 0, 420)
 
 TextLabel_3.Parent = CoolStuff
 TextLabel_3.BackgroundColor3 = Color3.new(1, 1, 1)
 TextLabel_3.BackgroundTransparency = 1.000
 TextLabel_3.BorderColor3 = Color3.new(0, 0, 0)
 TextLabel_3.BorderSizePixel = 0
-TextLabel_3.Size = UDim2.new(0, 280, 0, 38)
+TextLabel_3.Size = UDim2.new(0, 290, 0, 38)
 TextLabel_3.Font = Enum.Font.SourceSans
 TextLabel_3.Text = "Cool Stuff"
 TextLabel_3.TextColor3 = Color3.new(1, 1, 1)
@@ -65,7 +67,7 @@ AnnoyingSound.BackgroundColor3 = Color3.new(57/255, 57/255, 57/255)
 AnnoyingSound.BorderColor3 = Color3.new(0, 0, 0)
 AnnoyingSound.BorderSizePixel = 0
 AnnoyingSound.Position = UDim2.new(0.05, 0, 0.12, 0)
-AnnoyingSound.Size = UDim2.new(0, 250, 0, 35)
+AnnoyingSound.Size = UDim2.new(0, 260, 0, 38)
 AnnoyingSound.Font = Enum.Font.SourceSans
 AnnoyingSound.Text = "Annoying Sound [DISABLED]"
 AnnoyingSound.TextColor3 = Color3.new(227/255, 1/255, 5/255)
@@ -79,7 +81,7 @@ TazeAll.BackgroundColor3 = Color3.new(57/255, 57/255, 57/255)
 TazeAll.BorderColor3 = Color3.new(0, 0, 0)
 TazeAll.BorderSizePixel = 0
 TazeAll.Position = UDim2.new(0.05, 0, 0.26, 0)
-TazeAll.Size = UDim2.new(0, 250, 0, 35)
+TazeAll.Size = UDim2.new(0, 260, 0, 38)
 TazeAll.Font = Enum.Font.SourceSans
 TazeAll.Text = "Taze all"
 TazeAll.TextColor3 = Color3.new(22/255, 210/255, 220/255)
@@ -93,7 +95,7 @@ SilentAimToggle.BackgroundColor3 = Color3.new(57/255, 57/255, 57/255)
 SilentAimToggle.BorderColor3 = Color3.new(0, 0, 0)
 SilentAimToggle.BorderSizePixel = 0
 SilentAimToggle.Position = UDim2.new(0.05, 0, 0.40, 0)
-SilentAimToggle.Size = UDim2.new(0, 250, 0, 35)
+SilentAimToggle.Size = UDim2.new(0, 260, 0, 38)
 SilentAimToggle.Font = Enum.Font.SourceSans
 SilentAimToggle.Text = "Silent Aim [DISABLED]"
 SilentAimToggle.TextColor3 = Color3.new(227/255, 1/255, 5/255)
@@ -101,14 +103,14 @@ SilentAimToggle.TextScaled = true
 SilentAimToggle.TextSize = 29.000
 SilentAimToggle.TextWrapped = true
 
--- NEW: FOV Slider
+-- FOV Slider
 FOVSlider.Name = "FOVSlider"
 FOVSlider.Parent = CoolStuff
 FOVSlider.BackgroundColor3 = Color3.new(35/255, 35/255, 35/255)
 FOVSlider.BorderColor3 = Color3.new(0, 0, 0)
 FOVSlider.BorderSizePixel = 0
-FOVSlider.Position = UDim2.new(0.05, 0, 0.55, 0)
-FOVSlider.Size = UDim2.new(0, 250, 0, 50)
+FOVSlider.Position = UDim2.new(0.05, 0, 0.54, 0)
+FOVSlider.Size = UDim2.new(0, 260, 0, 50)
 
 FOVLabel.Parent = FOVSlider
 FOVLabel.BackgroundColor3 = Color3.new(1, 1, 1)
@@ -116,7 +118,7 @@ FOVLabel.BackgroundTransparency = 1.000
 FOVLabel.BorderColor3 = Color3.new(0, 0, 0)
 FOVLabel.BorderSizePixel = 0
 FOVLabel.Position = UDim2.new(0, 0, 0, 0)
-FOVLabel.Size = UDim2.new(0, 250, 0, 20)
+FOVLabel.Size = UDim2.new(0, 260, 0, 20)
 FOVLabel.Font = Enum.Font.SourceSans
 FOVLabel.Text = "FOV: 30°"
 FOVLabel.TextColor3 = Color3.new(1, 1, 1)
@@ -128,7 +130,7 @@ FOVBar.BackgroundColor3 = Color3.new(50/255, 50/255, 50/255)
 FOVBar.BorderColor3 = Color3.new(0, 0, 0)
 FOVBar.BorderSizePixel = 0
 FOVBar.Position = UDim2.new(0, 0, 0.5, 0)
-FOVBar.Size = UDim2.new(0, 250, 0, 8)
+FOVBar.Size = UDim2.new(0, 260, 0, 8)
 
 FOVFill.Name = "FOVFill"
 FOVFill.Parent = FOVBar
@@ -136,7 +138,7 @@ FOVFill.BackgroundColor3 = Color3.new(22/255, 210/255, 220/255)
 FOVFill.BorderColor3 = Color3.new(0, 0, 0)
 FOVFill.BorderSizePixel = 0
 FOVFill.Position = UDim2.new(0, 0, 0, 0)
-FOVFill.Size = UDim2.new(0.3, 0, 0, 8) -- 30/100 = 0.3
+FOVFill.Size = UDim2.new(0.3, 0, 0, 8)
 
 FOVButton.Name = "FOVButton"
 FOVButton.Parent = FOVSlider
@@ -145,11 +147,25 @@ FOVButton.BackgroundTransparency = 1.000
 FOVButton.BorderColor3 = Color3.new(0, 0, 0)
 FOVButton.BorderSizePixel = 0
 FOVButton.Position = UDim2.new(0, 0, 0, 0)
-FOVButton.Size = UDim2.new(0, 250, 0, 50)
+FOVButton.Size = UDim2.new(0, 260, 0, 50)
 FOVButton.Font = Enum.Font.SourceSans
 FOVButton.Text = ""
 FOVButton.TextColor3 = Color3.new(1, 1, 1)
 FOVButton.TextSize = 14.000
+
+-- Player count label
+PlayerCountLabel.Parent = CoolStuff
+PlayerCountLabel.BackgroundColor3 = Color3.new(1, 1, 1)
+PlayerCountLabel.BackgroundTransparency = 1.000
+PlayerCountLabel.BorderColor3 = Color3.new(0, 0, 0)
+PlayerCountLabel.BorderSizePixel = 0
+PlayerCountLabel.Position = UDim2.new(0.05, 0, 0.82, 0)
+PlayerCountLabel.Size = UDim2.new(0, 260, 0, 30)
+PlayerCountLabel.Font = Enum.Font.SourceSans
+PlayerCountLabel.Text = "Players Online: 0"
+PlayerCountLabel.TextColor3 = Color3.new(1, 1, 1)
+PlayerCountLabel.TextSize = 18.000
+PlayerCountLabel.TextXAlignment = Enum.TextXAlignment.Center
 
 -- KillFrame (right side)
 KillFrame.Name = "KillFrame"
@@ -158,14 +174,14 @@ KillFrame.BackgroundColor3 = Color3.new(45/255, 45/255, 45/255)
 KillFrame.BorderColor3 = Color3.new(0, 0, 0)
 KillFrame.BorderSizePixel = 0
 KillFrame.Position = UDim2.new(0.48, 0, 0.08, 0)
-KillFrame.Size = UDim2.new(0, 320, 0, 410)
+KillFrame.Size = UDim2.new(0, 330, 0, 420)
 
 TextLabel_Kill.Parent = KillFrame
 TextLabel_Kill.BackgroundColor3 = Color3.new(1, 1, 1)
 TextLabel_Kill.BackgroundTransparency = 1.000
 TextLabel_Kill.BorderColor3 = Color3.new(0, 0, 0)
 TextLabel_Kill.BorderSizePixel = 0
-TextLabel_Kill.Size = UDim2.new(0, 320, 0, 38)
+TextLabel_Kill.Size = UDim2.new(0, 330, 0, 38)
 TextLabel_Kill.Font = Enum.Font.SourceSans
 TextLabel_Kill.Text = "Kill List"
 TextLabel_Kill.TextColor3 = Color3.new(1, 1, 1)
@@ -177,8 +193,9 @@ PlayerList.BackgroundColor3 = Color3.new(35/255, 35/255, 35/255)
 PlayerList.BorderColor3 = Color3.new(0, 0, 0)
 PlayerList.BorderSizePixel = 0
 PlayerList.Position = UDim2.new(0.02, 0, 0.12, 0)
-PlayerList.Size = UDim2.new(0, 300, 0, 260)
+PlayerList.Size = UDim2.new(0, 310, 0, 270)
 PlayerList.ScrollBarThickness = 8
+PlayerList.CanvasSize = UDim2.new(0, 0, 0, 0)
 
 UIListLayout.Parent = PlayerList
 UIListLayout.SortOrder = Enum.SortOrder.Name
@@ -190,7 +207,7 @@ KillAllButton.BackgroundColor3 = Color3.new(150/255, 20/255, 20/255)
 KillAllButton.BorderColor3 = Color3.new(0, 0, 0)
 KillAllButton.BorderSizePixel = 0
 KillAllButton.Position = UDim2.new(0.02, 0, 0.82, 0)
-KillAllButton.Size = UDim2.new(0, 300, 0, 45)
+KillAllButton.Size = UDim2.new(0, 310, 0, 48)
 KillAllButton.Font = Enum.Font.SourceSans
 KillAllButton.Text = "KILL ALL"
 KillAllButton.TextColor3 = Color3.new(1, 1, 1)
@@ -203,9 +220,9 @@ TextLabel_4.BackgroundColor3 = Color3.new(1, 1, 1)
 TextLabel_4.BackgroundTransparency = 1.000
 TextLabel_4.BorderColor3 = Color3.new(0, 0, 0)
 TextLabel_4.BorderSizePixel = 0
-TextLabel_4.Size = UDim2.new(0, 650, 0, 40)
+TextLabel_4.Size = UDim2.new(0, 680, 0, 40)
 TextLabel_4.Font = Enum.Font.SourceSans
-TextLabel_4.Text = "Predora Prison Life GUI v3.4"
+TextLabel_4.Text = "Predora Prison Life GUI v3.5"
 TextLabel_4.TextColor3 = Color3.new(1, 1, 1)
 TextLabel_4.TextSize = 28.000
 
@@ -223,14 +240,16 @@ local function GFUR_fake_script() -- PredoraPrisonLife.LocalScript
 	local FOVFill = FOVSlider.FOVFill
 	local FOVLabel = FOVSlider.FOVLabel
 	local FOVButton = FOVSlider.FOVButton
+	local PlayerCountLabel = CoolStuff.PlayerCountLabel
 	local KillFrame = GUIMain.KillFrame
 	local PlayerList = KillFrame.PlayerList
 	local KillAllButton = KillFrame.KillAllButton
+	local UIListLayout = PlayerList:FindFirstChild("UIListLayout")
 	
 	local Settings = {
 		AnnoyingSoundEnabled = false,
 		SilentAimEnabled = false,
-		FOV = 30 -- Default FOV in degrees
+		FOV = 30
 	}
 	
 	GUIMain.Active = true
@@ -238,7 +257,14 @@ local function GFUR_fake_script() -- PredoraPrisonLife.LocalScript
 	
 	local KILL_DAMAGE = 10000
 	
-	-- FOV Slider logic
+	-- Update player count
+	local function UpdatePlayerCount()
+		local count = #game:GetService("Players"):GetPlayers() - 1
+		PlayerCountLabel.Text = "Players Online: " .. tostring(count)
+	end
+	
+	-- FOV Slider logic (2020 compatible using UserInputService)
+	local dragging = false
 	local function UpdateFOVDisplay()
 		local percent = Settings.FOV / 100
 		FOVFill.Size = UDim2.new(percent, 0, 0, 8)
@@ -246,19 +272,25 @@ local function GFUR_fake_script() -- PredoraPrisonLife.LocalScript
 	end
 	
 	FOVButton.MouseButton1Down:Connect(function()
-		local mouse = game:GetService("Players").LocalPlayer:GetMouse()
-		local connection
-		connection = mouse.Move:Connect(function()
+		dragging = true
+	end)
+	
+	game:GetService("UserInputService").InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = false
+		end
+	end)
+	
+	game:GetService("RunService").RenderStepped:Connect(function()
+		if dragging then
+			local mouse = game:GetService("Players").LocalPlayer:GetMouse()
 			local relativeX = (mouse.X - FOVSlider.AbsolutePosition.X) / FOVSlider.AbsoluteSize.X
 			relativeX = math.clamp(relativeX, 0, 1)
 			Settings.FOV = math.floor(relativeX * 100)
 			if Settings.FOV < 5 then Settings.FOV = 5 end
 			if Settings.FOV > 90 then Settings.FOV = 90 end
 			UpdateFOVDisplay()
-		end)
-		mouse.ButtonUp:Connect(function()
-			connection:Disconnect()
-		end)
+		end
 	end)
 	
 	-- SILENT AIM: Hook the Fire remote with FOV
@@ -277,18 +309,20 @@ local function GFUR_fake_script() -- PredoraPrisonLife.LocalScript
 				local Players = game:GetService("Players")
 				local localPlayer = Players.LocalPlayer
 				local localChar = localPlayer.Character
-				if not localChar then return originalFire(self, damage, startPos, endPos, gunHandle) end
+				if not localChar then 
+					return originalFire(self, damage, startPos, endPos, gunHandle) 
+				end
 				
 				local camera = game:GetService("Workspace").CurrentCamera
-				if not camera then return originalFire(self, damage, startPos, endPos, gunHandle) end
+				if not camera then 
+					return originalFire(self, damage, startPos, endPos, gunHandle) 
+				end
 				
-				local cameraPos = camera.CFrame.Position
-				local lookVector = camera.CFrame.LookVector
+				local cameraPos = camera.CFrame.p
+				local lookVector = camera.CFrame.lookVector
 				
-				-- Find the nearest target within FOV
 				local bestTarget = nil
 				local bestDist = math.huge
-				local bestAngle = math.huge
 				
 				local fovRad = math.rad(Settings.FOV)
 				
@@ -296,10 +330,13 @@ local function GFUR_fake_script() -- PredoraPrisonLife.LocalScript
 					if player ~= localPlayer then
 						local char = player.Character
 						if char then
-							local targetPart = char:FindFirstChild("Head") or char:FindFirstChild("HumanoidRootPart")
+							local targetPart = char:FindFirstChild("Head") 
+							if not targetPart then
+								targetPart = char:FindFirstChild("HumanoidRootPart")
+							end
 							if targetPart then
 								local targetPos = targetPart.Position
-								local toTarget = (targetPos - cameraPos).Unit
+								local toTarget = (targetPos - cameraPos).unit
 								local angle = math.acos(math.clamp(lookVector:Dot(toTarget), -1, 1))
 								
 								if angle <= fovRad then
@@ -307,7 +344,6 @@ local function GFUR_fake_script() -- PredoraPrisonLife.LocalScript
 									if dist < bestDist then
 										bestDist = dist
 										bestTarget = targetPos
-										bestAngle = angle
 									end
 								end
 							end
@@ -316,13 +352,11 @@ local function GFUR_fake_script() -- PredoraPrisonLife.LocalScript
 				end
 				
 				if bestTarget then
-					-- Fire at the target
 					local gunPos = gunHandle and gunHandle.Position or startPos
 					return originalFire(self, damage, gunPos, bestTarget, gunHandle)
 				end
 			end
 			
-			-- Normal firing
 			return originalFire(self, damage, startPos, endPos, gunHandle)
 		end
 	end
@@ -363,12 +397,14 @@ local function GFUR_fake_script() -- PredoraPrisonLife.LocalScript
 		if(not Player) then return end
 		local Event = game.ReplicatedStorage.GunRemote.Tag2
 		local Humanoid = game:GetService("Workspace"):FindFirstChild(PlayerName).Humanoid
-		Event:FireServer(Humanoid)
+		if Humanoid then
+			Event:FireServer(Humanoid)
+		end
 	end
 	
 	local function TaseAllPeople()
 		for I,V in pairs(game:GetService("Players"):GetChildren()) do
-			if(V.TeamColor.Name == "Bright orange" or V.TeamColor.Name == "Really red") then
+			if V.TeamColor and (V.TeamColor.Name == "Bright orange" or V.TeamColor.Name == "Really red") then
 				TazePlayer(V.Name)
 			end
 		end
@@ -419,6 +455,7 @@ local function GFUR_fake_script() -- PredoraPrisonLife.LocalScript
 	end
 	
 	local function BuildPlayerList()
+		-- Clear existing list
 		local children = PlayerList:GetChildren()
 		for i = #children, 1, -1 do
 			local child = children[i]
@@ -469,10 +506,9 @@ local function GFUR_fake_script() -- PredoraPrisonLife.LocalScript
 					KillPlayer(player.Name)
 				end)
 				
-				local teamColor = player.TeamColor
-				if teamColor then
+				if player.TeamColor then
 					local teamIndicator = Instance.new("Frame")
-					teamIndicator.BackgroundColor3 = teamColor.Color
+					teamIndicator.BackgroundColor3 = player.TeamColor.Color
 					teamIndicator.BorderColor3 = Color3.new(0, 0, 0)
 					teamIndicator.BorderSizePixel = 0
 					teamIndicator.Position = UDim2.new(0.65, 0, 0.15, 0)
@@ -483,6 +519,7 @@ local function GFUR_fake_script() -- PredoraPrisonLife.LocalScript
 		end
 		
 		UpdateCanvasSize()
+		UpdatePlayerCount()
 	end
 	
 	-- Auto-refresh every 5 seconds
@@ -539,12 +576,9 @@ local function GFUR_fake_script() -- PredoraPrisonLife.LocalScript
 		KillAllPlayers()
 	end)
 	
-	-- Initialize FOV display
+	-- Initialize
 	UpdateFOVDisplay()
-	
-	-- Setup silent aim hook
 	SetupSilentAim()
-	
 	BuildPlayerList()
 end
 coroutine.wrap(GFUR_fake_script)()
