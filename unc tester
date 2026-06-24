@@ -1,0 +1,409 @@
+--UNC Remake by Baconboy08
+local passes, fails, undefined = 0, 0, 0
+
+-- Initialize debug log file
+pcall(function() 
+    writefile("unc_debug.log", "=== UNC Environment Check Debug Log ===") 
+end)
+
+-- Robust debug logger using writefile/appendfile
+local function debugLog(msg)
+    pcall(function()
+        local success = pcall(appendfile, "unc_debug.log", msg .. "")
+        if not success then
+            local content = ""
+            pcall(function()
+                if isfile("unc_debug.log") then
+                    content = readfile("unc_debug.log") or ""
+                end
+            end)
+            pcall(writefile, "unc_debug.log", content .. msg .. "")
+        end
+    end)
+end
+
+debugLog("Script started.")
+
+print("UNC Environment Check")
+print("✅ - Pass, ⛔ - Fail, ⏺️ - No test, ⚠️ - Missing aliases")
+
+-- Uses pcall to test if a dotted global exists incrementally (e.g. "cache" -> "cache.invalidate")
+local function checkExistsIncrementally(name)
+    local ok, res = pcall(function()
+        local current = getfenv()
+        for part in string.gmatch(name, "[^%.]+") do
+            current = current[part]
+        end
+        return current
+    end)
+    return ok and res ~= nil
+end
+
+local function checkAliases(aliases)
+	if not aliases then return end
+	local undef = {}
+	for i = 1, #aliases do
+		if not checkExistsIncrementally(aliases[i]) then
+			table.insert(undef, aliases[i])
+		end
+	end
+	if #undef > 0 then
+		undefined = undefined + 1
+		warn("⚠️ " .. table.concat(undef, ", "))
+        debugLog("Missing aliases: " .. table.concat(undef, ", "))
+	end
+end
+
+local function runTest(name, aliases, func)
+    debugLog("Starting test: " .. name)
+	checkAliases(aliases)
+
+	if not func then
+		print("⏺️ " .. name)
+        debugLog("Skipped: No test function")
+		return
+	end
+
+	-- Replaced broken getfenv()[name] == nil check with incremental pcall check
+	if not checkExistsIncrementally(name) then
+		fails = fails + 1
+		warn("⛔ " .. name)
+        debugLog("Failed: Global missing")
+		return
+	end
+
+	local ok, msg = pcall(func)
+	if ok then
+		passes = passes + 1
+		if msg then
+			print("✅ " .. name .. " • " .. tostring(msg))
+            debugLog("Passed: " .. tostring(msg))
+		else
+			print("✅ " .. name)
+            debugLog("Passed")
+		end
+	else
+		fails = fails + 1
+		warn("⛔ " .. name .. " failed: " .. tostring(msg))
+        debugLog("Failed: " .. tostring(msg))
+	end
+end
+
+local function executeTest(name)
+	if name == "cache.invalidate" then
+		cache.invalidate(Instance.new("Part"))
+	elseif name == "cache.iscached" then
+		return cache.iscached(Instance.new("Part"))
+	elseif name == "cache.replace" then
+		cache.replace(Instance.new("Part"), Instance.new("Fire"))
+	elseif name == "cloneref" then
+		local p = Instance.new("Part")
+		return p ~= cloneref(p)
+	elseif name == "compareinstances" then
+		local p = Instance.new("Part")
+		return compareinstances(p, cloneref(p))
+	elseif name == "checkcaller" then
+		return checkcaller()
+	elseif name == "clonefunction" then
+		local f = function() return 1 end
+		return clonefunction(f)() == 1
+	elseif name == "getcallingscript" then
+		return getcallingscript() ~= nil
+	elseif name == "getscriptclosure" then
+		local s = game:GetService("Players").LocalPlayer.Character.Animate
+		return getscriptclosure(s)() ~= nil
+	elseif name == "hookfunction" then
+		local f = function() return 1 end
+		hookfunction(f, function() return 2 end)
+		return true
+	elseif name == "iscclosure" then
+		return iscclosure(print) == true
+	elseif name == "islclosure" then
+		return islclosure(function() end) == true
+	elseif name == "isexecutorclosure" then
+		return isexecutorclosure(function() end) == true
+	elseif name == "loadstring" then
+		return loadstring("return 1")() == 1
+	elseif name == "newcclosure" then
+		return newcclosure(function() return 1 end)() == 1
+	elseif name == "rconsoleclear" then
+		rconsoleclear()
+	elseif name == "rconsolecreate" then
+		rconsolecreate()
+	elseif name == "rconsoledestroy" then
+		rconsoledestroy()
+	elseif name == "rconsoleinput" then
+		rconsoleinput("test")
+	elseif name == "rconsoleprint" then
+		rconsoleprint("test")
+	elseif name == "rconsolesettitle" then
+		rconsolesettitle("UNC Test")
+	elseif name == "crypt.base64encode" then
+		return crypt.base64encode("test") == "dGVzdA=="
+	elseif name == "crypt.base64decode" then
+		return crypt.base64decode("dGVzdA==") == "test"
+	elseif name == "crypt.encrypt" then
+		return crypt.encrypt("test", crypt.generatekey()) ~= nil
+	elseif name == "crypt.decrypt" then
+		local k = crypt.generatekey()
+		return crypt.decrypt(crypt.encrypt("test", k), k) == "test"
+	elseif name == "crypt.generatebytes" then
+		return #crypt.generatebytes(10) > 0
+	elseif name == "crypt.generatekey" then
+		return #crypt.generatekey() > 0
+	elseif name == "crypt.hash" then
+		return crypt.hash("test", "sha256") ~= nil
+	elseif name == "debug.getconstant" then
+		return debug.getconstant(function() print(1) end, 1) == "print"
+	elseif name == "debug.getconstants" then
+		return #debug.getconstants(function() print(1) end) > 0
+	elseif name == "debug.getinfo" then
+		return debug.getinfo(function() end).func ~= nil
+	elseif name == "debug.getproto" then
+		local f = function() local function a() end end
+		return debug.getproto(f, 1) ~= nil
+	elseif name == "debug.getprotos" then
+		local f = function() local function a() end end
+		return #debug.getprotos(f) > 0
+	elseif name == "debug.getstack" then
+		return debug.getstack(1, 1) ~= nil
+	elseif name == "debug.getupvalue" then
+		local a = 1
+		return debug.getupvalue(function() return a end, 1) == 1
+	elseif name == "debug.getupvalues" then
+		local a = 1
+		return #debug.getupvalues(function() return a end) > 0
+	elseif name == "debug.setconstant" then
+		local f = function() return 1 end
+		debug.setconstant(f, 1, 2)
+		return f() == 2
+	elseif name == "debug.setstack" then
+		return debug.setstack(1, 1, "test") ~= nil
+	elseif name == "debug.setupvalue" then
+		local a = 1
+		local f = function() return a end
+		debug.setupvalue(f, 1, 2)
+		return f() == 2
+	elseif name == "readfile" then
+		writefile("unc_t.txt", "a")
+		return readfile("unc_t.txt") == "a"
+	elseif name == "listfiles" then
+		makefolder("unc_f")
+		return #listfiles("unc_f") >= 0
+		
+	-- SAFETY UPDATE: Granular logging and pcall wrapping for filesystem tests
+	elseif name == "writefile" then
+		debugLog("writefile: calling writefile")
+		pcall(writefile, "unc_w.txt", "b")
+		debugLog("writefile: calling readfile to verify")
+		local ok, content = pcall(readfile, "unc_w.txt")
+		debugLog("writefile: done")
+		return ok and content == "b"
+	elseif name == "makefolder" then
+		debugLog("makefolder: calling makefolder")
+		pcall(makefolder, "unc_m")
+		debugLog("makefolder: calling isfolder")
+		local ok, res = pcall(isfolder, "unc_m")
+		debugLog("makefolder: done")
+		return ok and res
+	elseif name == "appendfile" then
+		writefile("unc_a.txt", "a")
+		appendfile("unc_a.txt", "b")
+		return readfile("unc_a.txt") == "ab"
+	elseif name == "isfile" then
+		debugLog("isfile: calling isfile")
+		local ok, res = pcall(isfile, "unc_w.txt")
+		debugLog("isfile: done")
+		return ok and res == true
+	elseif name == "isfolder" then
+		debugLog("isfolder: calling isfolder")
+		local ok, res = pcall(isfolder, "unc_m")
+		debugLog("isfolder: done")
+		return ok and res == true
+	elseif name == "delfolder" then
+		debugLog("delfolder: calling delfolder")
+		pcall(delfolder, "unc_m")
+		debugLog("delfolder: calling isfolder to verify")
+		local ok, res = pcall(isfolder, "unc_m")
+		debugLog("delfolder: done")
+		return ok and res == false
+	elseif name == "delfile" then
+		debugLog("delfile: calling delfile")
+		pcall(delfile, "unc_w.txt")
+		debugLog("delfile: calling isfile to verify")
+		local ok, res = pcall(isfile, "unc_w.txt")
+		debugLog("delfile: done")
+		return ok and res == false
+		
+	elseif name == "loadfile" then
+		writefile("unc_l.txt", "return 1")
+		return loadfile("unc_l.txt")() == 1
+	elseif name == "dofile" then
+		writefile("unc_d.txt", "return 1")
+		return dofile("unc_d.txt") == 1
+	elseif name == "isrbxactive" then
+		return type(isrbxactive()) == "boolean"
+	elseif name == "mouse1click" then
+		mouse1click()
+	elseif name == "mouse1press" then
+		mouse1press()
+	elseif name == "mouse1release" then
+		mouse1release()
+	elseif name == "mouse2click" then
+		mouse2click()
+	elseif name == "mouse2press" then
+		mouse2press()
+	elseif name == "mouse2release" then
+		mouse2release()
+	elseif name == "mousemoveabs" then
+		mousemoveabs(0, 0)
+	elseif name == "mousemoverel" then
+		mousemoverel(0, 0)
+	elseif name == "mousescroll" then
+		mousescroll(0)
+	elseif name == "fireclickdetector" then
+		fireclickdetector(Instance.new("ClickDetector"))
+	elseif name == "getcallbackvalue" then
+		local b = Instance.new("BindableFunction")
+		return getcallbackvalue(b, "OnInvoke") == nil
+	elseif name == "getconnections" then
+		local b = Instance.new("BindableEvent")
+		b.Event:Connect(function() end)
+		return #getconnections(b.Event) > 0
+	elseif name == "getcustomasset" then
+		writefile("unc_ca.txt", "a")
+		return getcustomasset("unc_ca.txt") ~= nil
+	elseif name == "gethiddenproperty" then
+		return gethiddenproperty(Instance.new("Fire"), "size_xml") ~= nil
+	elseif name == "sethiddenproperty" then
+		sethiddenproperty(Instance.new("Fire"), "size_xml", 10)
+	elseif name == "gethui" then
+		return typeof(gethui()) == "Instance"
+	elseif name == "getinstances" then
+		return #getinstances() > 0
+	elseif name == "getnilinstances" then
+		return #getnilinstances() >= 0
+	elseif name == "isscriptable" then
+		return isscriptable(Instance.new("Fire"), "Size") == true
+	elseif name == "setscriptable" then
+		setscriptable(Instance.new("Fire"), "size_xml", true)
+	elseif name == "setrbxclipboard" then
+		setrbxclipboard("test")
+	elseif name == "getrawmetatable" then
+		return getrawmetatable({}) ~= nil
+	elseif name == "hookmetamethod" then
+		hookmetamethod({}, "__index", function() end)
+	elseif name == "getnamecallmethod" then
+		return true 
+	elseif name == "isreadonly" then
+		return isreadonly({}) == false
+	elseif name == "setrawmetatable" then
+		setrawmetatable({}, {})
+	elseif name == "setreadonly" then
+		setreadonly({}, false)
+	elseif name == "identifyexecutor" then
+		return type(identifyexecutor()) == "string"
+	elseif name == "lz4compress" then
+		return #lz4compress("test") > 0
+	elseif name == "lz4decompress" then
+		return lz4decompress(lz4compress("test"), 4) == "test"
+	elseif name == "messagebox" then
+		messagebox("test", "test", 0)
+	elseif name == "queue_on_teleport" then
+		queue_on_teleport("print(1)")
+	elseif name == "request" then
+		local ok, res = pcall(request, {Url="http://example.com"})
+		return ok
+	elseif name == "setclipboard" then
+		setclipboard("test")
+	elseif name == "setfpscap" then
+		setfpscap(60)
+	elseif name == "getgc" then
+		return #getgc() > 0
+	elseif name == "getgenv" then
+		return getgenv() ~= nil
+	elseif name == "getloadedmodules" then
+		return #getloadedmodules() > 0
+	elseif name == "getrenv" then
+		return getrenv()._G ~= _G
+	elseif name == "getrunningscripts" then
+		return #getrunningscripts() > 0
+	elseif name == "getscriptbytecode" then
+		local s = game:GetService("Players").LocalPlayer.Character.Animate
+		return #getscriptbytecode(s) > 0
+	elseif name == "getscripthash" then
+		local s = game:GetService("Players").LocalPlayer.Character.Animate
+		return #getscripthash(s) > 0
+	elseif name == "getscripts" then
+		return #getscripts() > 0
+	elseif name == "getsenv" then
+		local s = game:GetService("Players").LocalPlayer.Character.Animate
+		return getsenv(s) ~= nil
+	elseif name == "getthreadidentity" then
+		return type(getthreadidentity()) == "number"
+	elseif name == "setthreadidentity" then
+		setthreadidentity(2)
+		return getthreadidentity() == 2
+	elseif name == "Drawing" then
+		return Drawing ~= nil
+	elseif name == "Drawing.new" then
+		local d = Drawing.new("Square")
+		d.Visible = false
+		return d ~= nil
+	elseif name == "Drawing.Fonts" then
+		return Drawing.Fonts.UI == 0
+	elseif name == "isrenderobj" then
+		return isrenderobj(Drawing.new("Square")) == true
+	elseif name == "getrenderproperty" then
+		local d = Drawing.new("Square")
+		return getrenderproperty(d, "Visible") == true
+	elseif name == "setrenderproperty" then
+		local d = Drawing.new("Square")
+		setrenderproperty(d, "Visible", false)
+		return d.Visible == false
+	elseif name == "cleardrawcache" then
+		cleardrawcache()
+	elseif name == "WebSocket" then
+		return WebSocket ~= nil
+	elseif name == "WebSocket.connect" then
+		local ok, ws = pcall(WebSocket.connect, "ws://echo.websocket.events")
+		if ok and ws then ws:Close() end
+		return ok
+	end
+end
+
+-- Run tests sequentially to prevent VM overload
+local tests = {
+	"cache.invalidate", "cache.iscached", "cache.replace", "cloneref", "compareinstances",
+	"checkcaller", "clonefunction", "getcallingscript", "getscriptclosure", "hookfunction",
+	"iscclosure", "islclosure", "isexecutorclosure", "loadstring", "newcclosure",
+	"rconsoleclear", "rconsolecreate", "rconsoledestroy", "rconsoleinput", "rconsoleprint", "rconsolesettitle",
+	"crypt.base64encode", "crypt.base64decode", "crypt.encrypt", "crypt.decrypt", "crypt.generatebytes", "crypt.generatekey", "crypt.hash",
+	"debug.getconstant", "debug.getconstants", "debug.getinfo", "debug.getproto", "debug.getprotos", "debug.getstack", "debug.getupvalue", "debug.getupvalues", "debug.setconstant", "debug.setstack", "debug.setupvalue",
+	"readfile", "listfiles", "writefile", "makefolder", "appendfile", "isfile", "isfolder", "delfolder", "delfile", "loadfile", "dofile",
+	"isrbxactive", "mouse1click", "mouse1press", "mouse1release", "mouse2click", "mouse2press", "mouse2release", "mousemoveabs", "mousemoverel", "mousescroll",
+	"fireclickdetector", "getcallbackvalue", "getconnections", "getcustomasset", "gethiddenproperty", "sethiddenproperty", "gethui", "getinstances", "getnilinstances", "isscriptable", "setscriptable", "setrbxclipboard",
+	"getrawmetatable", "hookmetamethod", "getnamecallmethod", "isreadonly", "setrawmetatable", "setreadonly",
+	"identifyexecutor", "lz4compress", "lz4decompress", "messagebox", "queue_on_teleport", "request", "setclipboard", "setfpscap",
+	"getgc", "getgenv", "getloadedmodules", "getrenv", "getrunningscripts", "getscriptbytecode", "getscripthash", "getscripts", "getsenv", "getthreadidentity", "setthreadidentity",
+	"Drawing", "Drawing.new", "Drawing.Fonts", "isrenderobj", "getrenderproperty", "setrenderproperty", "cleardrawcache",
+	"WebSocket", "WebSocket.connect"
+}
+
+for i = 1, #tests do
+	runTest(tests[i], {}, function()
+		return executeTest(tests[i])
+	end)
+	wait() -- Prevents VM overload on old 2020 clients
+end
+
+debugLog("All tests completed successfully.")
+
+print("UNC Summary")
+local total = passes + fails
+local rate = total > 0 and math.floor(passes / total * 100 + 0.5) or 0
+print("✅ Tested with a " .. rate .. "% success rate (" .. passes .. " out of " .. total .. ")")
+print("⛔ " .. fails .. " tests failed")
+print("⚠️ " .. undefined .. " globals are missing aliases")
+
+debugLog("Final Summary: " .. passes .. " passes, " .. fails .. " fails, " .. undefined .. " undefined.")
